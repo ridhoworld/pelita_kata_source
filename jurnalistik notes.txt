@@ -1,0 +1,150 @@
+
+1. Manajemen Pengguna & Redaksi (users & roles)
+
+Dalam dunia jurnalistik, terdapat pemisahan tugas yang jelas antara jurnalis/penulis, editor, dan admin.
+• roles (Peran pengguna: Admin, Editor, Jurnalis, Kontributor)
+	• id (Primary Key, INT / UUID)
+	• name (VARCHAR) — Contoh: 'editor', 'journalist'
+	• permissions (JSON) — Hak akses spesifik
+• users (Data akun redaksi dan pembaca terdaftar)
+	• id (Primary Key, INT / UUID)
+	• role_id (Foreign Key -> roles.id)
+	• name (VARCHAR) — Nama lengkap
+	• username (VARCHAR, UNIQUE) — Untuk URL profil penulis
+	• email (VARCHAR, UNIQUE)
+	• password_hash (VARCHAR)
+	• bio (TEXT) — Biografi singkat jurnalis
+	• avatar_url (VARCHAR)
+	• created_at, updated_at (TIMESTAMP)
+
+2. Inti Konten Jurnalistik (articles)
+
+Tabel utama untuk menyimpan naskah berita, opini, atau liputan mendalam.
+• articles
+	• id (Primary Key, INT / UUID)
+	• author_id (Foreign Key -> users.id) — Penulis utama
+	• editor_id (Foreign Key -> users.id, NULLABLE) — Editor yang menyunting
+	• category_id (Foreign Key -> categories.id)
+	• title (VARCHAR) — Judul artikel
+	• slug (VARCHAR, UNIQUE) — URL ramah SEO, misal: harga-beras-naik-2026
+	• excerpt (TEXT) — Ringkasan pendek/lead berita
+	• content (LONGTEXT / JSON) — Isi artikel lengkap
+	• featured_image_id (Foreign Key -> media.id, NULLABLE)
+	• status (ENUM) — 'draft', 'in_review', 'scheduled', 'published', 'archived'
+	• is_breaking (BOOLEAN) — Penanda berita terkini/utama
+	• is_featured (BOOLEAN) — Penanda pilihan redaksi (Headline)
+	• views_count (BIGINT, DEFAULT 0)
+	• reading_time (INT) — Estimasi waktu baca dalam menit
+	• published_at (TIMESTAMP, NULLABLE) — Waktu tayang (mendukung penjadwalan)
+	• created_at, updated_at, deleted_at (TIMESTAMP)
+
+3. Taksonomi & Pengelompokan (categories & tags)
+
+Membantu pembaca menemukan topik terkait serta memperkuat struktur navigasi dan SEO.
+• categories (Rubrik utama seperti Nasional, Ekonomi, Teknologi, Olahraga)
+	• id (Primary Key, INT)
+	• parent_id (Foreign Key -> categories.id, NULLABLE) — Untuk sub-kategori (misal: Olahraga -> Sepak Bola)
+	• name (VARCHAR)
+	• slug (VARCHAR, UNIQUE)
+	• description (TEXT)
+• tags (Topik spesifik seperti Piala Dunia, Inflasi, AI)
+	• id (Primary Key, INT)
+	• name (VARCHAR)
+	• slug (VARCHAR, UNIQUE)
+• article_tags (Tabel penghubung Many-to-Many antara artikel dan tag)
+	• article_id (Foreign Key -> articles.id)
+	• tag_id (Foreign Key -> tags.id)
+
+4. Manajemen Aset & Media (media)
+
+Artikel jurnalistik membutuhkan penyimpanan kredit foto, sumber gambar, dan keterangan (caption) yang jelas demi etika pers.
+• media
+	• id (Primary Key, INT / UUID)
+	• uploaded_by (Foreign Key -> users.id)
+	• file_url (VARCHAR)
+	• file_type (VARCHAR) — Contoh: 'image/webp', 'video/mp4'
+	• caption (TEXT) — Keterangan peristiwa pada foto
+	• credit_source (VARCHAR) — Contoh: "ANTARA FOTO / Budi" atau "Dok. Pribadi"
+	• alt_text (VARCHAR) — Untuk aksesibilitas dan SEO
+	• created_at (TIMESTAMP)
+
+5. SEO & Metadata (article_seo)
+
+Dipisahkan agar tabel articles tetap ringan saat melakukan query daftar berita di halaman depan.
+• article_seo
+	• article_id (Primary Key & Foreign Key -> articles.id)
+	• meta_title (VARCHAR)
+	• meta_description (VARCHAR)
+	• canonical_url (VARCHAR, NULLABLE)
+	• og_image_url (VARCHAR, NULLABLE) — Gambar khusus saat dibagikan ke media sosial
+
+6. Interaksi Pembaca (comments & bookmarks)
+
+Fitur keterlibatan pembaca (engagement) dengan sistem moderasi untuk mencegah spam.
+• comments
+	• id (Primary Key, INT / UUID)
+	• article_id (Foreign Key -> articles.id)
+	• user_id (Foreign Key -> users.id, NULLABLE) — Jika wajib login
+	• parent_id (Foreign Key -> comments.id, NULLABLE) — Untuk fitur balas komentar (nested)
+	• content (TEXT)
+	• status (ENUM) — 'pending', 'approved', 'spam', 'rejected'
+	• created_at (TIMESTAMP)
+• bookmarks (Fitur simpan artikel bagi pembaca)
+	• user_id (Foreign Key -> users.id)
+	• article_id (Foreign Key -> articles.id)
+	• created_at (TIMESTAMP)
+
+7. Riwayat Revisi (article_revisions) — Opsional namun Penting
+
+Sangat berguna dalam standar jurnalistik untuk melacak perubahan naskah, ralat berita, atau memulihkan tulisan sebelum disunting editor.
+• article_revisions
+	• id (Primary Key, INT / UUID)
+	• article_id (Foreign Key -> articles.id)
+	• edited_by (Foreign Key -> users.id)
+	• title_snapshot (VARCHAR)
+	• content_snapshot (LONGTEXT / JSON)
+	• revision_note (VARCHAR) — Catatan perubahan dari editor
+	• created_at (TIMESTAMP)
+
+
+
+
+
+Bertindaklah sebagai Senior Product Manager dan System Architect. Tolong buatkan dokumen Product Requirements Document (PRD) yang komprehensif, terstruktur, dan siap dieksekusi oleh developer untuk proyek pembuatan website artikel jurnalistik. 
+
+Berikut adalah detail dan batasan proyeknya: 
+
+1. **Nama & Deskripsi Proyek:** 
+
+  * Nama Website: Pelita Kata
+  * Tujuan: Website publikasi artikel jurnalistik gratis untuk umum (non-komersial, tanpa paywall, dan tanpa iklan yang mengganggu).
+  * Fokus Topik/Niche: Isu lokal, literasi, opini publik, atau liputan mendalam
+2. **Target Pengguna (User Persona):** 
+
+  * Pembaca Umum: Mengakses artikel secara gratis tanpa perlu login/registrasi.
+  * Pengelola Konten: [Pilih salah satu: Hanya tim redaksi internal / Membuka kontribusi tulisan dari pembaca umum].
+3. **Alur Kerja Redaksi (Editorial Workflow):** 
+
+  * Status artikel: [Contoh: Draft -> Review -> Published -> Archived].
+  * Fitur wajib jurnalistik: Pencantuman nama penulis, editor, tanggal tayang, waktu baca (reading time), kredit/sumber foto pada gambar utama, serta catatan ralat/pembaruan (update log) jika ada koreksi data.
+4. **Halaman Utama (Sitemap):** 
+
+  * Halaman Publik: Beranda (Headline & artikel terbaru), Halaman Detail Artikel, Halaman Kategori & Tag, Halaman Pencarian, Halaman Profil Penulis, dan Halaman Statis (Tentang Kami, Pedoman Media Siber, Kontak).
+  * Halaman CMS (Admin/Redaksi): Dashboard ringkas, Rich Text Editor untuk menulis artikel, Manajemen Media/Gambar, Manajemen Kategori/Tag, dan Pengaturan SEO dasar.
+5. **Kebutuhan Teknis & Efisiensi Biaya (Low-Cost/Zero-Cost):** 
+
+  * Tech Stack (jika sudah ada): Frontend : NextJS Typescript Tailwindcss. Backend : Laravel API.
+  * Performa: Wajib SEO-friendly (meta tags, semantic HTML, sitemap.xml otomatis), mobile-first, dan mendukung kompresi gambar otomatis ke format WebP.
+  * Interaksi Pembaca: Tanpa sistem login pembaca; cukup sediakan tombol share ke media sosial (WhatsApp, X, Facebook) dan [pilih: tanpa kolom komentar / menggunakan komentar pihak ketiga yang ringan seperti Giscus atau Disqus].
+
+Tolong susun dokumen PRD ini dengan format standar industri yang mencakup: 
+
+1. Ringkasan Eksekutif & Tujuan Produk (Product Overview)
+2. User Persona & User Stories (lengkap dengan Acceptance Criteria)
+3. Alur Pengguna (User Flow) & Alur Kerja Redaksi
+4. Spesifikasi Fungsional (Detail fitur untuk sisi Pembaca dan sisi CMS)
+5. Kebutuhan Non-Fungsional (Performa, SEO, Keamanan, dan Batasan Biaya)
+6. Rancangan Skema Database Relasional (Tabel dan relasi yang sudah disesuaikan untuk skala gratis ini)
+7. Metrik Keberhasilan (Success Metrics) tanpa orientasi monetisasi.
+
+Gunakan bahasa Indonesia yang profesional, jelas, dan teknis agar mudah dipahami oleh programmer maupun desainer UI/UX.

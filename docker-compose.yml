@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: pelita_kata_db
+      MYSQL_ROOT_PASSWORD: pelita_secret_change_me
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+
+  backend:
+    image: php:8.2-cli
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+    ports:
+      - "8000:8000"
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    depends_on:
+      - db
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /var/www/frontend
+    volumes:
+      - ./frontend:/var/www/frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    command: sh -c "npm ci && npm run build && npm run start"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+
